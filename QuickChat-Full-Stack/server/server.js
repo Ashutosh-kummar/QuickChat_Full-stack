@@ -26,13 +26,17 @@ io.on("connection", (socket)=>{
 
     if(userId) userSocketMap[userId] = socket.id;
     
-    // Emit online users to all connected clients
+    // Emit online users to all connected clients (full list)
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    // Also emit an incremental event so clients don't miss updates
+    if (userId) io.emit("userConnected", userId);
 
     socket.on("disconnect", ()=>{
         console.log("User Disconnected", userId);
         delete userSocketMap[userId];
+        // Emit updated list and an incremental disconnect event
         io.emit("getOnlineUsers", Object.keys(userSocketMap))
+        if (userId) io.emit("userDisconnected", userId);
     })
 })
 

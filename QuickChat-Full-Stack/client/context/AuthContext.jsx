@@ -58,7 +58,15 @@ const login = async (state, credentials)=>{
         setOnlineUsers([]);
         axios.defaults.headers.common["token"] = null;
         toast.success("Logged out successfully")
-        socket.disconnect();
+        if (socket) {
+            // remove listeners and disconnect to avoid stale handlers
+            socket.off("getOnlineUsers");
+            socket.off("userConnected");
+            socket.off("userDisconnected");
+            socket.off("connect");
+            socket.disconnect();
+        }
+        setSocket(null);
     }
 
     // Update profile function to handle user profile updates
@@ -78,17 +86,32 @@ const login = async (state, credentials)=>{
     // Connect socket function to handle socket connection and online users updates
     const connectSocket = (userData)=>{
         if(!userData || socket?.connected) return;
+        // Create socket without auto-connecting so we can register listeners first
         const newSocket = io(backendUrl, {
-            query: {
-                userId: userData._id,
-            }
+            query: { userId: userData._id },
+            autoConnect: false
         });
-        newSocket.connect();
-        setSocket(newSocket);
 
+        // Register listeners before connecting to avoid missing the initial broadcast
         newSocket.on("getOnlineUsers", (userIds)=>{
             setOnlineUsers(userIds);
-        })
+        });
+
+        // Incremental presence updates so already-connected clients update immediately
+        newSocket.on("userConnected", (userId)=>{
+            setOnlineUsers(prev => {
+                if (!userId) return prev;
+                return prev.includes(userId) ? prev : [...prev, userId];
+            });
+        });
+
+        newSocket.on("userDisconnected", (userId)=>{
+            setOnlineUsers(prev => prev.filter(id => id !== userId));
+        });
+
+        // Establish connection after listeners are attached
+        newSocket.connect();
+        setSocket(newSocket);
     }
 
     useEffect(()=>{
