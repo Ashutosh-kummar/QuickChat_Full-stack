@@ -2,10 +2,11 @@ import React, { useContext, useEffect, useState } from 'react'
 import assets, { imagesDummyData } from '../assets/assets'
 import { ChatContext } from '../../context/ChatContext'
 import { AuthContext } from '../../context/AuthContext'
+import InteractiveButton from './InteractiveButton'
 
 const RightSidebar = () => {
 
-    const {selectedUser, messages} = useContext(ChatContext)
+    const {selectedUser, messages, removeFriend} = useContext(ChatContext)
     const {logout, onlineUsers} = useContext(AuthContext)
     const [msgImages, setMsgImages] = useState([])
 
@@ -27,6 +28,15 @@ const RightSidebar = () => {
                 {selectedUser.fullName}
             </h1>
             <p className='px-10 mx-auto'>{selectedUser.bio}</p>
+
+            {/* Unfriend button (reusable) */}
+            <InteractiveButton
+                onClick={(e) => { e.stopPropagation(); removeFriend(selectedUser._id); }}
+                aria-label={`Unfriend ${selectedUser?.fullName}`}
+                className='mt-3 text-xs text-rose-400 px-2 py-1 rounded'
+            >
+                Unfriend
+            </InteractiveButton>
         </div>
 
         <hr className="border-[#ffffff50] my-4"/>

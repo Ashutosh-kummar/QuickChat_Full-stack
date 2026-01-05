@@ -11,16 +11,34 @@ const LoginPage = () => {
   const [bio, setBio] = useState("")
   const [isDataSubmitted, setIsDataSubmitted] = useState(false);
 
+  // require explicit agreement to proceed to the bio step
+  const [agreed, setAgreed] = useState(false);
+  const [agreeError, setAgreeError] = useState(false);
+
   const {login} = useContext(AuthContext)
 
   const onSubmitHandler = (event)=>{
     event.preventDefault();
 
-    if(currState === 'Sign up' && !isDataSubmitted){
-      setIsDataSubmitted(true)
+    // Prevent moving to "Write your bio" unless the user checked the agreement checkbox
+    if (currState === 'Sign up' && !isDataSubmitted) {
+      if (!agreed) {
+        setAgreeError(true);
+        setTimeout(()=> setAgreeError(false), 3000);
+        return;
+      }
+      // advance to bio step and reset the checkbox so bio screen shows it unchecked by default
+      setIsDataSubmitted(true);
+      setAgreed(false);
       return;
     }
 
+    // proceed with final submit (login or signup)
+    if (!agreed) {
+      // keep minimal feedback for safety
+      alert("Please agree to the terms of use & privacy policy to continue.");
+      return;
+    }
     login(currState=== "Sign up" ? 'signup' : 'login', {fullName, email, password, bio})
   }
 
@@ -60,14 +78,20 @@ const LoginPage = () => {
           )
         }
 
-        <button type='submit' className='py-3 bg-gradient-to-r from-purple-400 to-violet-600 text-white rounded-md cursor-pointer'>
-          {currState === "Sign up" ? "Create Account" : "Login Now"}
-        </button>
-
         <div className='flex items-center gap-2 text-sm text-gray-500'>
-          <input type="checkbox" />
+          <input type="checkbox" checked={agreed} onChange={(e)=> setAgreed(e.target.checked)} />
           <p>Agree to the terms of use & privacy policy.</p>
         </div>
+        {/* inline warning when user attempts to proceed without agreement */}
+        {agreeError && <p className="text-rose-300 text-xs">You must agree to the terms to continue.</p>}
+
+        <button
+          type='submit'
+          disabled={currState === "Sign up" && !isDataSubmitted && !agreed}
+          className={`py-3 bg-gradient-to-r from-purple-400 to-violet-600 text-white rounded-md cursor-pointer ${currState === "Sign up" && !isDataSubmitted && !agreed ? "opacity-50 cursor-not-allowed" : ""}`}
+        >
+          {currState === "Sign up" ? "Create Account" : "Login Now"}
+        </button>
 
         <div className='flex flex-col gap-2'>
           {currState === "Sign up" ? (

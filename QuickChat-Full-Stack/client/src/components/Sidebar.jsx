@@ -7,7 +7,7 @@ import { ChatContext } from '../../context/ChatContext';
 const Sidebar = () => {
 
     const {getUsers, users, selectedUser, setSelectedUser,
-        unseenMessages, setUnseenMessages } = useContext(ChatContext);
+        unseenMessages, setUnseenMessages, removeFriend } = useContext(ChatContext);
 
     const {logout, onlineUsers} = useContext(AuthContext)
 
@@ -56,6 +56,7 @@ const Sidebar = () => {
                         : <span className='text-neutral-400 text-xs'>Offline</span>
                     }
                 </div>
+
                 {unseenMessages[user._id] > 0 && <p className='absolute top-4 right-4 text-xs h-5 w-5 flex justify-center items-center rounded-full bg-violet-500/50'>{unseenMessages[user._id]}</p>}
             </div>
         ) )}

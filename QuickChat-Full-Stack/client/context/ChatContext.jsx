@@ -12,6 +12,28 @@ export const ChatProvider = ({ children })=>{
     const [selectedUser, setSelectedUser] = useState(null)
     const [unseenMessages, setUnseenMessages] = useState({})
 
+    // Keep a local list of hidden/unfriended users (persisted)
+    const [hiddenFriends, setHiddenFriends] = useState(()=> {
+        try { return JSON.parse(localStorage.getItem("hiddenFriends") || "[]") } catch { return [] }
+    });
+
+    // savedVisibleIds: null = no saved preference yet; [] = intentionally saved empty list
+    const [savedVisibleIds, setSavedVisibleIds] = useState(() => {
+        const raw = localStorage.getItem("savedVisibleUsers");
+        return raw === null ? null : JSON.parse(raw);
+    });
+
+    // Persist hiddenFriends to localStorage
+    useEffect(()=> {
+        localStorage.setItem("hiddenFriends", JSON.stringify(hiddenFriends));
+    }, [hiddenFriends]);
+
+    // Persist savedVisibleIds (including explicit empty array)
+    useEffect(()=> {
+        if (savedVisibleIds === null) return; // do not write key if user never saved preferences
+        localStorage.setItem("savedVisibleUsers", JSON.stringify(savedVisibleIds));
+    }, [savedVisibleIds]);
+
     const {socket, axios} = useContext(AuthContext);
 
     // function to get all users for sidebar
@@ -19,8 +41,22 @@ export const ChatProvider = ({ children })=>{
         try {
             const { data } = await axios.get("/api/messages/users");
             if (data.success) {
-                setUsers(data.users)
-                setUnseenMessages(data.unseenMessages)
+                // If user had an explicit saved visible list, use it (this preserves explicit empty list).
+                let visibleUsers;
+                if (savedVisibleIds !== null) {
+                    visibleUsers = data.users.filter(u => savedVisibleIds.includes(u._id));
+                } else {
+                    // fallback to previous hiddenFriends behavior
+                    visibleUsers = data.users.filter(u => !hiddenFriends.includes(u._id));
+                }
+
+                setUsers(visibleUsers);
+                // also remove unseen entries for users not visible
+                const visibleIds = new Set(visibleUsers.map(u => u._id));
+                const filteredUnseen = Object.fromEntries(
+                    Object.entries(data.unseenMessages || {}).filter(([k]) => visibleIds.has(k))
+                );
+                setUnseenMessages(filteredUnseen)
             }
         } catch (error) {
             toast.error(error.message)
@@ -80,8 +116,26 @@ export const ChatProvider = ({ children })=>{
         return ()=> unsubscribeFromMessages();
     },[socket, selectedUser])
 
+    // remove a friend locally (hide and persist)
+    const removeFriend = (userId)=>{
+        if(!userId) return;
+        setHiddenFriends(prev => prev.includes(userId) ? prev : [...prev, userId]);
+        // Update users list immediately and persist the visible IDs (this will write even when result is [])
+        const newUsers = users.filter(u => u._id !== userId);
+        setUsers(newUsers);
+        setUnseenMessages(prev => {
+            const copy = {...prev};
+            delete copy[userId];
+            return copy;
+        });
+        if (selectedUser?._id === userId) setSelectedUser(null);
+        // Persist the current visible user ids; an empty array is intentionally saved
+        setSavedVisibleIds(newUsers.map(u => u._id));
+    }
+
     const value = {
         messages, users, selectedUser, getUsers, getMessages, sendMessage, setSelectedUser, unseenMessages, setUnseenMessages
+        , removeFriend
     }
 
     return (

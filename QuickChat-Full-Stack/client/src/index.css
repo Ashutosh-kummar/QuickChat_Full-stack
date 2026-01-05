@@ -9,3 +9,24 @@
 ::-webkit-scrollbar{
   display: none;
 }
+
+/* Interactive button styles (reusable) */
+.interactive-btn{
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  will-change: transform, background-color;
+  -webkit-tap-highlight-color: transparent;
+}
+.interactive-btn:hover{
+  transform: translateY(-2px) scale(1.02);
+  background-color: rgba(220,38,38,0.06); /* subtle rose tint */
+  box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+}
+.interactive-btn:active{
+  transform: translateY(0) scale(0.995);
+}
+.interactive-btn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(251,113,133,0.12);
+  border-radius: 6px;
+}
